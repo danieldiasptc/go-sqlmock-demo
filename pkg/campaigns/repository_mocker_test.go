@@ -36,9 +36,46 @@ func TestRepository_GetByID_mockery(t *testing.T) {
 			})
 		m.On("Error").Return(nil)
 
-		c, err := r.GetByID(id)
+		res, err := r.GetByID(id)
 
 		assert.Nil(t, err)
-		assert.Equal(t, ec, c)
+		assert.Equal(t, ec, res)
+	})
+}
+
+func TestRepository_Create_mockery(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		r, m := setupRepository(t)
+
+		id := int64(123)
+		cr := campaigns2.Campaign{
+			ID:          0,
+			Name:        "name",
+			Description: "desc",
+			EndDate:     time.Date(2022, time.December, 12, 12, 12, 0, 0, time.UTC),
+			Tags: []campaigns2.Tag{
+				{
+					ID:   0,
+					Name: "tag1",
+				},
+			},
+		}
+
+		m.On("Begin").Return(m)
+		m.On("Create", mock.AnythingOfType("*campaigns.Campaign")).Return(m).
+			Run(func(args mock.Arguments) {
+				c := args.Get(0).(*campaigns2.Campaign)
+				c.ID = id
+			})
+		m.On("Error").Return(nil)
+		m.On("Commit").Return(m)
+
+		res, err := r.Create(cr)
+
+		cx := cr
+		cx.ID = id
+
+		assert.Nil(t, err)
+		assert.Equal(t, cx, res)
 	})
 }

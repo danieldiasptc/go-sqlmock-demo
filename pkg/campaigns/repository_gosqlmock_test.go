@@ -91,3 +91,57 @@ func TestRepository_GetByID_sqlmock(t *testing.T) {
 		assert.Equal(t, ec, c)
 	})
 }
+
+func TestRepository_Create_sqlmock(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		r, m := setupIntegrationRepository(t)
+
+		cr := campaigns2.Campaign{
+			ID:          0,
+			Name:        "name",
+			Description: "desc",
+			EndDate:     time.Date(2022, time.December, 12, 12, 12, 0, 0, time.UTC),
+			Tags: []campaigns2.Tag{
+				{
+					ID:   0,
+					Name: "tag1",
+				},
+			},
+		}
+
+		campaignID := int64(123)
+		tagId := int64(321)
+
+		m.ExpectBegin()
+
+		q1 := `INSERT INTO "campaigns" ("name","description","end_date") VALUES ($1,$2,$3) RETURNING "id"`
+		m.ExpectQuery(regexp.QuoteMeta(q1)).
+			WithArgs(cr.Name, cr.Description, cr.EndDate).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(campaignID))
+
+		q2 := `INSERT INTO "tags" ("name") VALUES ($1) ON CONFLICT DO NOTHING RETURNING "id"`
+		m.ExpectQuery(regexp.QuoteMeta(q2)).
+			WithArgs(cr.Tags[0].Name).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(tagId))
+
+		q3 := `INSERT INTO "campaign_tag" ("campaign_id","tag_id") VALUES ($1,$2) ON CONFLICT DO NOTHING`
+		m.ExpectExec(regexp.QuoteMeta(q3)).
+			WithArgs(campaignID, tagId).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+
+		m.ExpectCommit()
+
+		res, err := r.Create(cr)
+
+		ec := cr
+		ec.ID = campaignID
+
+		// assertions
+		err = m.ExpectationsWereMet()
+		if err != nil {
+			t.Errorf("Failed to meet expectations, got error: %v", err)
+		}
+		assert.Nil(t, err)
+		assert.Equal(t, ec, res)
+	})
+}
