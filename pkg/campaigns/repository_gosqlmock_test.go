@@ -54,6 +54,7 @@ func TestRepository_GetByID_sqlmock(t *testing.T) {
 			},
 		}
 
+		// query 1
 		cols := []string{"id", "name", "description", "end_date"}
 		values := []driver.Value{ec.ID, ec.Name, ec.Description, ec.EndDate}
 
@@ -62,6 +63,7 @@ func TestRepository_GetByID_sqlmock(t *testing.T) {
 			WithArgs(id).
 			WillReturnRows(sqlmock.NewRows(cols).AddRow(values...))
 
+		// query 2
 		cols2 := []string{"campaign_id", "tag_id"}
 		values2 := []driver.Value{id, tagId}
 		q2 := `SELECT * FROM "campaign_tag" WHERE "campaign_tag"."campaign_id" = $1`
@@ -69,6 +71,7 @@ func TestRepository_GetByID_sqlmock(t *testing.T) {
 			WithArgs(id).
 			WillReturnRows(sqlmock.NewRows(cols2).AddRow(values2...))
 
+		// query 3
 		cols3 := []string{"id", "name"}
 		values3 := []driver.Value{tagId, ec.Tags[0].Name}
 		q3 := `SELECT * FROM "tags" WHERE "tags"."id" = $1`
@@ -76,8 +79,10 @@ func TestRepository_GetByID_sqlmock(t *testing.T) {
 			WithArgs(ec.Tags[0].ID).
 			WillReturnRows(sqlmock.NewRows(cols3).AddRow(values3...))
 
+		// test
 		c, err := r.GetByID(id)
 
+		// assertions
 		err = m.ExpectationsWereMet()
 		if err != nil {
 			t.Errorf("Failed to meet expectations, got error: %v", err)
